@@ -1,0 +1,70 @@
+import 'package:flutter/material.dart'; import 'package:intl/intl.dart';
+
+void main() { runApp(ControleFinanceiroApp()); }
+
+class ControleFinanceiroApp extends StatelessWidget { @override Widget build(BuildContext context) { return MaterialApp( theme: ThemeData.dark(), home: HomePage(), ); } }
+
+class Transaction { final String description; final double amount; final DateTime date; final bool isIncome;
+
+Transaction({required this.description, required this.amount, required this.date, required this.isIncome}); }
+
+class HomePage extends StatefulWidget { @override _HomePageState createState() => _HomePageState(); }
+
+class _HomePageState extends State<HomePage> { final List<Transaction> _transactions = [];
+
+void _addTransaction(String desc, double amount, bool isIncome) { final newTx = Transaction( description: desc, amount: amount, date: DateTime.now(), isIncome: isIncome, ); setState(() { _transactions.insert(0, newTx); }); }
+
+void _openAddTransactionModal(BuildContext context) { final _descController = TextEditingController(); final _valueController = TextEditingController(); bool _isIncome = false;
+
+showModalBottomSheet(
+  context: context,
+  builder: (_) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.end,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: _descController,
+            decoration: InputDecoration(labelText: 'Descrição'),
+          ),
+          TextField(
+            controller: _valueController,
+            keyboardType: TextInputType.numberWithOptions(decimal: true),
+            decoration: InputDecoration(labelText: 'Valor'),
+          ),
+          Row(
+            children: [
+              Text('Entrada'),
+              Switch(
+                value: _isIncome,
+                onChanged: (val) {
+                  _isIncome = val;
+                },
+              ),
+            ],
+          ),
+          ElevatedButton(
+            child: Text('Salvar'),
+            onPressed: () {
+              final desc = _descController.text;
+              final value = double.tryParse(_valueController.text) ?? 0.0;
+              if (desc.isNotEmpty && value > 0) {
+                _addTransaction(desc, value, _isIncome);
+                Navigator.of(context).pop();
+              }
+            },
+          )
+        ],
+      ),
+    );
+  },
+);
+
+}
+
+double get _total => _transactions.fold(0.0, (sum, t) => t.isIncome ? sum + t.amount : sum - t.amount); double get _totalIncomes => _transactions.where((t) => t.isIncome).fold(0.0, (sum, t) => sum + t.amount); double get _totalExpenses => _transactions.where((t) => !t.isIncome).fold(0.0, (sum, t) => sum + t.amount);
+
+@override Widget build(BuildContext context) { return Scaffold( appBar: AppBar( title: Text('Home'), actions: [ IconButton( icon: Icon(Icons.filter_list), onPressed: () {}, ) ], ), body: Column( children: [ Padding( padding: const EdgeInsets.all(16.0), child: Column( children: [ Text( 'R$ ${_total.toStringAsFixed(2)}', style: TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: Colors.white), ), SizedBox(height: 8), Row( mainAxisAlignment: MainAxisAlignment.center, children: [ Text('R$ ${_totalIncomes.toStringAsFixed(2)}', style: TextStyle(color: Colors.green, fontSize: 16)), SizedBox(width: 16), Text('R$ ${_totalExpenses.toStringAsFixed(2)}', style: TextStyle(color: Colors.red, fontSize: 16)), ], ) ], ), ), Expanded( child: ListView.builder( itemCount: _transactions.length, itemBuilder: (ctx, index) { final tx = _transactions[index]; return ListTile( title: Text(tx.description), subtitle: Text(DateFormat('dd/MM/yyyy HH:mm').format(tx.date)), trailing: Text( 'R$ ${tx.amount.toStringAsFixed(2)}', style: TextStyle(color: tx.isIncome ? Colors.green : Colors.red), ), ); }, ), ), ], ), floatingActionButton: FloatingActionButton( child: Icon(Icons.add), onPressed: () => _openAddTransactionModal(context), ), bottomNavigationBar: BottomNavigationBar( items: const <BottomNavigationBarItem>[ BottomNavigationBarItem(icon: Icon(Icons.home), label: 'Home'), BottomNavigationBarItem(icon: Icon(Icons.calendar_today), label: 'Calendário'), BottomNavigationBarItem(icon: Icon(Icons.label), label: 'Etiquetas'), BottomNavigationBarItem(icon: Icon(Icons.settings), label: 'Configurações'), ], selectedItemColor: Colors.yellow, unselectedItemColor: Colors.white, backgroundColor: Colors.grey[900], type: BottomNavigationBarType.fixed, ), ); } }
+
